@@ -108,6 +108,11 @@ export default function SupportTickets() {
                       ? 'bg-primary text-black rounded-tr-none' 
                       : 'bg-white/10 text-white rounded-tl-none'
                     }`}>
+                      {msg.imageUrl && (
+                        <a href={msg.imageUrl} target="_blank" rel="noreferrer" className="block mb-2 overflow-hidden rounded-lg">
+                          <img src={msg.imageUrl} alt="Attachment" className="max-w-full hover:scale-105 transition-transform" />
+                        </a>
+                      )}
                       {msg.text}
                       <div className={`text-[9px] mt-1 opacity-50 ${msg.sender === 'admin' ? 'text-black' : 'text-white'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

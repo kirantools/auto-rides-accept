@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -131,13 +132,29 @@ class AuthService {
     });
   }
 
-  static Future<void> addMessageToTicket(String ticketId, String text) async {
+  static Future<String?> uploadTicketImage(String ticketId, File imageFile) async {
+    try {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('support_attachments')
+          .child(ticketId)
+          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+      
+      await ref.putFile(imageFile);
+      return await ref.getDownloadURL();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<void> addMessageToTicket(String ticketId, String text, {String? imageUrl}) async {
     await _db.collection('support_tickets').doc(ticketId).update({
       'messages': FieldValue.arrayUnion([
         {
           'text': text,
           'sender': 'user',
           'timestamp': DateTime.now().millisecondsSinceEpoch,
+          if (imageUrl != null) 'imageUrl': imageUrl,
         }
       ]),
       'status': 'pending',

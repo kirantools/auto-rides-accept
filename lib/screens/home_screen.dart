@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import 'subscription_screen.dart';
 import 'support_screen.dart';
 import '../widgets/terms_overlay.dart';
@@ -337,6 +338,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const Text("UNIVERSAL ENGINE", style: TextStyle(fontSize: 10, letterSpacing: 3, color: Colors.grey, fontWeight: FontWeight.bold)),
         ]),
         Row(children: [
+          IconButton(
+            onPressed: () {
+              Share.share(
+                "🚀 Download Swayam Universal - The world's fastest ride-acceptance engine for drivers!\n\nGet it now at: https://swayamuniversal.netlify.app",
+                subject: 'Swayam Universal App'
+              );
+            }, 
+            icon: const Icon(Icons.share_rounded, color: AppTheme.safetyOrange)
+          ),
           IconButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SupportScreen())), 
             icon: const Icon(Icons.help_outline, color: AppTheme.safetyOrange)

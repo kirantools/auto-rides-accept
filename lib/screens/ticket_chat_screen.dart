@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
@@ -17,6 +19,7 @@ class TicketChatScreen extends StatefulWidget {
 class _TicketChatScreenState extends State<TicketChatScreen> {
   final _msgController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _isUploading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +70,25 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(msg['text'] ?? "", 
-                              style: TextStyle(color: isUser ? Colors.black : Colors.white, fontWeight: FontWeight.w500)),
+                            if (msg['imageUrl'] != null) ...[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  msg['imageUrl'],
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Padding(
+                                      padding: EdgeInsets.all(20),
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                            if (msg['text'] != null && msg['text'].toString().isNotEmpty)
+                              Text(msg['text'] ?? "", 
+                                style: TextStyle(color: isUser ? Colors.black : Colors.white, fontWeight: FontWeight.w500)),
                             const SizedBox(height: 5),
                             Text(
                               isUser ? "You" : "Swayam Support",
@@ -97,26 +117,40 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
         border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: TextField(
-                controller: _msgController,
-                decoration: InputDecoration(
-                  hintText: "Type a message...",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.05),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
+            if (_isUploading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: LinearProgressIndicator(backgroundColor: Colors.transparent, color: AppTheme.safetyOrange),
               ),
-            ),
-            const SizedBox(width: 10),
-            FloatingActionButton(
-              onPressed: _sendMessage,
-              backgroundColor: AppTheme.safetyOrange,
-              mini: true,
-              child: const Icon(Icons.send, color: Colors.black, size: 20),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: _isUploading ? null : _pickAndUploadImage,
+                  icon: const Icon(Icons.add_a_photo_rounded, color: AppTheme.safetyOrange),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _msgController,
+                    decoration: InputDecoration(
+                      hintText: "Type a message...",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FloatingActionButton(
+                  onPressed: _sendMessage,
+                  backgroundColor: AppTheme.safetyOrange,
+                  mini: true,
+                  child: const Icon(Icons.send, color: Colors.black, size: 20),
+                ),
+              ],
             ),
           ],
         ),
@@ -130,8 +164,25 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
 
     _msgController.clear();
     await AuthService.addMessageToTicket(widget.ticketId, text);
+    _scrollToBottom();
+  }
+
+  void _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     
-    // Scroll to bottom
+    if (image != null) {
+      setState(() => _isUploading = true);
+      final url = await AuthService.uploadTicketImage(widget.ticketId, File(image.path));
+      if (url != null) {
+        await AuthService.addMessageToTicket(widget.ticketId, "Shared a screenshot", imageUrl: url);
+      }
+      setState(() => _isUploading = false);
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(

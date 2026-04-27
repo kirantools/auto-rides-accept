@@ -28,28 +28,32 @@ class _SupportScreenState extends State<SupportScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text("Support Center", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          bottom: const TabBar(
-            indicatorColor: AppTheme.safetyOrange,
-            tabs: [
-              Tab(text: "New Ticket"),
-              Tab(text: "My Tickets"),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildNewTicketTab(),
-            _buildMyTicketsTab(),
-          ],
-        ),
+      child: Builder(
+        builder: (innerContext) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text("Support Center", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              bottom: const TabBar(
+                indicatorColor: AppTheme.safetyOrange,
+                tabs: [
+                  Tab(text: "New Ticket"),
+                  Tab(text: "My Tickets"),
+                ],
+              ),
+            ),
+            body: TabBarView(
+              children: [
+                _buildNewTicketTab(innerContext),
+                _buildMyTicketsTab(),
+              ],
+            ),
+          );
+        }
       ),
     );
   }
 
-  Widget _buildNewTicketTab() {
+  Widget _buildNewTicketTab(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -101,7 +105,7 @@ class _SupportScreenState extends State<SupportScreen> {
           
           const SizedBox(height: 30),
           ElevatedButton(
-            onPressed: _isSubmitting ? null : _submitTicket,
+            onPressed: _isSubmitting ? null : () => _submitTicket(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.safetyOrange,
               foregroundColor: Colors.black,
@@ -213,24 +217,35 @@ class _SupportScreenState extends State<SupportScreen> {
     );
   }
 
-  void _submitTicket() async {
+  void _submitTicket(BuildContext scaffoldContext) async {
     final msg = _messageController.text.trim();
     if (msg.isEmpty) return;
 
     setState(() => _isSubmitting = true);
+
     try {
       await AuthService.sendDetailedSupportTicket(_selectedCategory, msg);
-      _messageController.clear();
-      DefaultTabController.of(context).animateTo(1);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Ticket submitted successfully!"), backgroundColor: Colors.green)
-      );
+      
+      if (mounted) {
+        _messageController.clear();
+        setState(() => _isSubmitting = false);
+        
+        // Show success first
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+          const SnackBar(content: Text("Ticket submitted successfully!"), backgroundColor: Colors.green)
+        );
+
+        // Switch tab safely
+        final tabController = DefaultTabController.of(scaffoldContext);
+        tabController.animateTo(1);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Submission failed. Try again."), backgroundColor: Colors.red)
-      );
-    } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+          SnackBar(content: Text("Submission failed: ${e.toString()}"), backgroundColor: Colors.red)
+        );
+      }
     }
   }
 }
