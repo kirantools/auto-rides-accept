@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swayam Universal | Download App</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <div class="logo">
+                <span class="logo-text">SWAYAM <span class="accent">UNIVERSAL</span></span>
+            </div>
+            <nav>
+                <button class="how-to-btn" onclick="openModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                    How to Install
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container hero-content">
+                <div class="badge">V1.0.0 RELEASED</div>
+                <h1>Powerful Automation for <span class="gradient-text">Modern Drivers</span></h1>
+                <p>Maximize your earnings with the world's most advanced ride-acceptance engine. Fast, secure, and built for performance.</p>
+                
+                <div class="download-section">
+                    <a href="#" class="download-btn primary">
+                        <div class="btn-icon">1</div>
+                        <div class="btn-text">
+                            <span>Download Server 1</span>
+                            <small>Direct APK Download</small>
+                        </div>
+                    </a>
+                    <a href="#" class="download-btn secondary">
+                        <div class="btn-icon">2</div>
+                        <div class="btn-text">
+                            <span>Download Server 2</span>
+                            <small>Mirror Link</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="phone-preview">
+                <div class="glow"></div>
+                <div class="floating-card c1">🚀 Ultra Fast</div>
+                <div class="floating-card c2">🛡️ 100% Secure</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Swayam Universal Engine. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Video Modal -->
+    <div id="videoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div class="video-container">
+                <!-- Replace with actual YouTube/Vimeo link or local video path -->
+                <iframe 
+                    id="tutorialVideo"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                    title="How to install Swayam" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+            <div class="modal-info">
+                <h3>Installation Guide</h3>
+                <p>Follow these steps to successfully install and configure the Swayam Universal Engine on your Android device.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('videoModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('videoModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            // Stop video
+            var iframe = document.getElementById('tutorialVideo');
+            var src = iframe.src;
+            iframe.src = src;
+        }
+
+        window.onclick = function(event) {
+            var modal = document.getElementById('videoModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
