@@ -32,18 +32,18 @@
                 <p>Maximize your earnings with the world's most advanced ride-acceptance engine. Fast, secure, and built for performance.</p>
                 
                 <div class="download-section">
-                    <a href="#" class="download-btn primary">
+                    <a href="Swayam_V1.apk" download class="download-btn primary">
                         <div class="btn-icon">1</div>
                         <div class="btn-text">
                             <span>Download Server 1</span>
-                            <small>Direct APK Download</small>
+                            <small>Swayam_V1.apk</small>
                         </div>
                     </a>
-                    <a href="#" class="download-btn secondary">
+                    <a href="Swayam_V2.apk" download class="download-btn secondary">
                         <div class="btn-icon">2</div>
                         <div class="btn-text">
                             <span>Download Server 2</span>
-                            <small>Mirror Link</small>
+                            <small>Swayam_V2.apk</small>
                         </div>
                     </a>
                 </div>
@@ -68,15 +68,10 @@
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
             <div class="video-container">
-                <!-- Replace with actual YouTube/Vimeo link or local video path -->
-                <iframe 
-                    id="tutorialVideo"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
-                    title="How to install Swayam" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
-                </iframe>
+                <video id="tutorialVideo" controls poster="assets/video-poster.png">
+                    <source src="how_to_install.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
             <div class="modal-info">
                 <h3>Installation Guide</h3>
@@ -94,10 +89,9 @@
         function closeModal() {
             document.getElementById('videoModal').style.display = 'none';
             document.body.style.overflow = 'auto';
-            // Stop video
-            var iframe = document.getElementById('tutorialVideo');
-            var src = iframe.src;
-            iframe.src = src;
+            // Pause video
+            var video = document.getElementById('tutorialVideo');
+            video.pause();
         }
 
         window.onclick = function(event) {
