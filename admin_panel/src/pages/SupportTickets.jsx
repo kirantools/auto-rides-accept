@@ -9,7 +9,7 @@ export default function SupportTickets() {
   const [replyText, setReplyText] = useState({});
 
   useEffect(() => {
-    const q = query(collection(db, 'support_tickets'), orderBy('lastUpdatedAt', 'desc'));
+    const q = query(collection(db, 'support_tickets'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snap) => {
       setTickets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
@@ -19,10 +19,7 @@ export default function SupportTickets() {
 
   const handleResolve = async (ticket) => {
     const status = ticket.status === 'resolved' ? 'pending' : 'resolved';
-    await updateDoc(doc(db, 'support_tickets', ticket.id), { 
-      status,
-      lastUpdatedAt: Timestamp.now() 
-    });
+    await updateDoc(doc(db, 'support_tickets', ticket.id), { status });
   };
 
   const handleSendReply = async (ticketId) => {
@@ -34,8 +31,7 @@ export default function SupportTickets() {
         text: text.trim(),
         sender: 'admin',
         timestamp: Date.now()
-      }),
-      lastUpdatedAt: Timestamp.now()
+      })
     });
 
     setReplyText({ ...replyText, [ticketId]: '' });

@@ -121,7 +121,6 @@ class AuthService {
       'message': message,
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
-      'lastUpdatedAt': FieldValue.serverTimestamp(),
       'messages': [
         {
           'text': message,
@@ -141,7 +140,6 @@ class AuthService {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         }
       ]),
-      'lastUpdatedAt': FieldValue.serverTimestamp(),
       'status': 'pending',
     });
   }
@@ -150,7 +148,6 @@ class AuthService {
     if (currentUser == null) return const Stream.empty();
     return _db.collection('support_tickets')
         .where('userId', isEqualTo: currentUser!.uid)
-        .orderBy('lastUpdatedAt', descending: true)
         .snapshots();
   }
 

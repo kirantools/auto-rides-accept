@@ -124,6 +124,14 @@ class _SupportScreenState extends State<SupportScreen> {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         
         final tickets = snapshot.data!.docs;
+        // Sort locally to avoid index errors
+        tickets.sort((a, b) {
+          final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          if (aTime == null || bTime == null) return 0;
+          return bTime.compareTo(aTime);
+        });
+
         if (tickets.isEmpty) {
           return Center(
             child: Column(

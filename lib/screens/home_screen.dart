@@ -150,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() {
         expiryDate = date;
         isSubscribed = active;
+        isTermsAccepted = data['termsAccepted'] == true;
         if (!isSubscribed && isRunning) {
           isRunning = false;
           _saveSettings();
@@ -245,6 +246,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     String? tutorial;
     if (settingsSnap.exists) tutorial = settingsSnap.data()?['tutorialLink'];
 
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(AuthService.currentUser?.uid).get();
+
     setState(() {
       isAccessibilityOn = acc;
       isBatteryOptimized = batt;
@@ -252,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       expiryDate = expiry;
       isSubscribed = active;
       _tutorialLink = tutorial;
-      isTermsAccepted = doc.data()?['termsAccepted'] == true;
+      isTermsAccepted = userDoc.data()?['termsAccepted'] == true;
     });
   }
 
@@ -317,10 +320,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
         ),
-        if (!isTermsAccepted) 
-          TermsOverlay(onAccepted: () => setState(() => isTermsAccepted = true)),
-      ],
-    );
+      ),
+    ),
+    if (!isTermsAccepted) 
+      TermsOverlay(onAccepted: () => setState(() => isTermsAccepted = true)),
+  ],
+);
   }
 
   Widget _buildHeader() {
