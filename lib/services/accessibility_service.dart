@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 
 class AccessibilityService {
-  static const _channel = MethodChannel('com.example.auto_rides_accept/settings');
+  static const _channel = MethodChannel('com.swayam.swayam_universal/settings');
 
   static Future<void> updateSettings({
     required double minFare,
@@ -15,15 +15,19 @@ class AccessibilityService {
         'isEnabled': isEnabled,
       });
     } on PlatformException catch (e) {
-      print("Failed to update settings: ${e.message}");
+      print("Sync Error: ${e.message}");
     }
   }
 
-  static Future<void> openSettings() async {
-    try {
-      await _channel.invokeMethod('openAccessibilitySettings');
-    } on PlatformException catch (e) {
-      print("Failed to open settings: ${e.message}");
-    }
-  }
+  static Future<void> openSettings() async => await _channel.invokeMethod('openAccessibilitySettings');
+  
+  static Future<bool> isEnabled() async => await _channel.invokeMethod('isAccessibilityEnabled');
+
+  static Future<bool> isIgnoringBatteryOptimizations() async => await _channel.invokeMethod('isIgnoringBatteryOptimizations');
+
+  static Future<void> requestIgnoreBatteryOptimizations() async => await _channel.invokeMethod('requestIgnoreBatteryOptimizations');
+
+  static Future<bool> isOverlayPermissionGranted() async => await _channel.invokeMethod('checkOverlayPermission');
+
+  static Future<void> requestOverlayPermission() async => await _channel.invokeMethod('requestOverlayPermission');
 }

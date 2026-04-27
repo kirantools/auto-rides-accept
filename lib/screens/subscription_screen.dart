@@ -1,15 +1,9 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
-import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
-import 'package:flutter_cashfree_pg_sdk/utils/cfexceptions.dart';
 import '../theme/app_theme.dart';
-import '../services/subscription_service.dart';
+import '../services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/payment_service.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -19,203 +13,91 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  final List<Map<String, dynamic>> plans = [
-    {
-      'name': 'STARTER PLAN (1 Day)',
-      'hindi': 'स्टार्टर प्लान (1 दिन)',
-      'price': '₹20',
-      'days': 1,
-      'isPopular': false,
-    },
-    {
-      'name': 'ECONOMY PLAN (15 Days)',
-      'hindi': 'इकोनॉमी प्लान (15 दिन)',
-      'price': '₹99',
-      'days': 15,
-      'isPopular': false,
-    },
-    {
-      'name': 'PREMIUM MONTHLY (30 Days)',
-      'hindi': 'प्रीमियम मंथली (30 दिन)',
-      'price': '₹199',
-      'days': 30,
-      'isPopular': true,
-    },
-  ];
+  bool _isLoading = false;
+  Map<String, dynamic> _pricing = {'plan1': 10, 'plan15': 49, 'plan30': 99};
+  bool _fetchingPrices = true;
 
-  Future<Map<String, dynamic>?> _fetchPaymentSession(String amount) async {
-    try {
-      // Clean the amount string (remove ₹)
-      final cleanAmount = amount.replaceAll('₹', '').trim();
-      
-      // --- PRODUCTION SETUP ---
-      // 1. Host your 'backend' folder on Render.com or Railway.app
-      // 2. Paste the URL they give you here:
-      final String cloudUrl = "https://auto-rides-accept.onrender.com"; 
-      
-      final response = await http.post(
-        Uri.parse("$cloudUrl/create-order"), 
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "amount": double.parse(cleanAmount).toStringAsFixed(2),
-          "customerId": "driver_${DateTime.now().millisecondsSinceEpoch}",
-          "customerPhone": "9999999999"
-        }),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print("Backend Response Data: $data");
-        return {
-          "payment_session_id": data["payment_session_id"],
-          "order_id": data["order_id"]
-        };
-      } else {
-        print("Backend Error Code: ${response.statusCode}");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Backend Error: ${response.statusCode}. Please check Render logs.")),
-        );
-      }
-    } catch (e) {
-      print("Connection Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Connection Failed: $e")),
-      );
-    }
-    return null; 
+  @override
+  void initState() {
+    super.initState();
+    _fetchPricing();
   }
 
-  void _handlePayment(int days, String amount) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: AppTheme.safetyOrange)),
-    );
-
-    // 1. Get the session details from your server
-    Map<String, dynamic>? sessionData = await _fetchPaymentSession(amount);
-    Navigator.pop(context); // Close loading
-
-    if (sessionData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Payment Server is waking up... Please try again in 30 seconds.")),
-      );
-      return;
-    }
-
-    // 2. Start Real Cashfree Checkout
+  Future<void> _fetchPricing() async {
     try {
-      var session = CFSessionBuilder()
-          .setEnvironment(CFEnvironment.SANDBOX)
-          .setPaymentSessionId(sessionData["payment_session_id"])
-          .setOrderId(sessionData["order_id"])
-          .build();
-
-      var paymentGatewayService = CFPaymentGatewayService();
-      
-      paymentGatewayService.setCallback((String orderId) async {
-          // PAYMENT SUCCESS!
-          await SubscriptionService.activateSubscription(days);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Payment Successful! Plan Active."), backgroundColor: AppTheme.brightGreen),
-            );
-            Navigator.pop(context, true);
-          }
-      }, (CFErrorResponse errorResponse, String orderId) {
-          // PAYMENT FAILED
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Payment Failed: ${errorResponse.getMessage()}"), backgroundColor: Colors.red),
-          );
-      });
-
-      var webCheckoutPayment = CFWebCheckoutPaymentBuilder()
-          .setSession(session)
-          .build();
-      paymentGatewayService.doPayment(webCheckoutPayment);
-    } catch (e) {
-      print("Cashfree Error: $e");
+      final snap = await FirebaseFirestore.instance.collection('app_settings').doc('pricing').get();
+      if (snap.exists) setState(() => _pricing = snap.data()!);
+    } finally {
+      setState(() => _fetchingPrices = false);
     }
+  }
+
+  Future<void> _manualSync() async {
+    setState(() => _isLoading = true);
+    try {
+      final expiry = await AuthService.getSubscriptionExpiry();
+      if (expiry != null && expiry.isAfter(DateTime.now())) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Subscription Activated!"), backgroundColor: AppTheme.activeGreen));
+          Navigator.pop(context, true);
+          return;
+        }
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Not activated yet. Please wait 1 minute.")));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _buyPlan(int days, dynamic price) async {
+    final intPrice = int.tryParse(price.toString()) ?? 10;
+    setState(() => _isLoading = true);
+    await PaymentService.startPayment(
+      context: context, amount: intPrice, days: days,
+      onSuccess: (msg) { if (mounted) { setState(() => _isLoading = false); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Check status after paying."))); } },
+      onError: (err) { if (mounted) { setState(() => _isLoading = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.red)); } },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_fetchingPrices) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppTheme.safetyOrange)));
     return Scaffold(
-      backgroundColor: AppTheme.oledBlack,
-      appBar: AppBar(
-        title: Text("UPGRADE / अपग्रेड", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: Text("CHOOSE YOUR PLAN", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)), centerTitle: true, backgroundColor: Colors.transparent, elevation: 0),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Icon(Icons.stars_rounded, size: 80, color: AppTheme.safetyOrange),
-            const SizedBox(height: 20),
-            Text(
-              "UNLOCK ALL FEATURES",
-              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            Text(
-              "सभी सुविधाओं को अनलॉक करें",
-              style: GoogleFonts.hind(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 40),
-            ...plans.map((plan) => _buildPlanCard(plan)).toList(),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              _buildPlanCard("STARTER", "1 DAY", "₹${_pricing['plan1']}", Colors.blueGrey, () => _buyPlan(1, _pricing['plan1'])),
+              const SizedBox(height: 15),
+              _buildPlanCard("PRO", "15 DAYS", "₹${_pricing['plan15']}", AppTheme.safetyOrange, () => _buyPlan(15, _pricing['plan15']), isBest: true),
+              const SizedBox(height: 15),
+              _buildPlanCard("ELITE", "30 DAYS", "₹${_pricing['plan30']}", Colors.purpleAccent, () => _buyPlan(30, _pricing['plan30'])),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(onPressed: _isLoading ? null : _manualSync, icon: const Icon(Icons.sync), label: const Text("CHECK STATUS"), style: ElevatedButton.styleFrom(backgroundColor: Colors.white10, minimumSize: const Size(double.infinity, 50))),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPlanCard(Map<String, dynamic> plan) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: AppTheme.darkGrey,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: plan['isPopular'] ? AppTheme.safetyOrange : Colors.white10,
-          width: 2,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    plan['name'],
-                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  Text(
-                    plan['hindi'],
-                    style: GoogleFonts.hind(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    plan['price'],
-                    style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.safetyOrange),
-                  ),
-                ],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => _handlePayment(plan['days'], plan['price']),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.safetyOrange,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: Text("BUY / खरीदें", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
+  Widget _buildPlanCard(String name, String duration, String price, Color color, VoidCallback onTap, {bool isBest = false}) {
+    return GestureDetector(
+      onTap: _isLoading ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(25), border: Border.all(color: isBest ? color : color.withOpacity(0.3), width: isBest ? 3 : 1)),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (isBest) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)), child: const Text("BEST VALUE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black))),
+            const SizedBox(height: 5),
+            Text(name, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+            Text(duration, style: const TextStyle(color: Colors.white70)),
+          ]),
+          Text(price, style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900)),
+        ]),
       ),
     );
   }

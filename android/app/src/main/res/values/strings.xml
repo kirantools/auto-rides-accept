@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_description">Automates ride acceptance based on fare filters.</string>
+    <string name="accessibility_description">Swayam Universal: Automatically accepts rides in English, Telugu, Hindi, Tamil, and Kannada.</string>
 </resources>
